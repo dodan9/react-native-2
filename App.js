@@ -12,12 +12,23 @@ import { theme } from "./colors";
 export default function App() {
   const [working, setWorking] = useState(true);
   const [userText, setUserText] = useState("");
+  const [toDos, setToDos] = useState({});
 
   const travel = () => setWorking(false);
   const work = () => setWorking(true);
 
   const onChangeInputText = (payload) => {
     setUserText(payload);
+  };
+
+  const addToDo = () => {
+    if (userText === "") return;
+
+    const newToDos = Object.assign({}, toDos, {
+      [Date.now()]: { userText, work: working },
+    });
+    setToDos(newToDos);
+    setUserText("");
   };
 
   useEffect(() => {}, [working]);
@@ -46,6 +57,7 @@ export default function App() {
       <View>
         <TextInput
           onChangeText={onChangeInputText}
+          onSubmitEditing={addToDo}
           value={userText}
           placeholderTextColor={theme.grey}
           placeholder={working ? "add to do" : "where you want to go?"}
