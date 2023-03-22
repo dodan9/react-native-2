@@ -6,39 +6,72 @@ import {
   View,
   TouchableOpacity,
   TextInput,
+  ScrollView,
 } from "react-native";
+import AsnyncStorage from "@react-native-async-storage/async-storage";
 import { theme } from "./colors";
 
+const modes = {
+  work: "work",
+  travel: "travel",
+};
+const STORAGE_KEY = "@toDos";
+
 export default function App() {
-  const [working, setWorking] = useState(true);
+  const [mode, setMode] = useState(modes.work);
   const [userText, setUserText] = useState("");
   const [toDos, setToDos] = useState({});
 
-  const travel = () => setWorking(false);
-  const work = () => setWorking(true);
+  const saveToDos = async (toSave) => {
+    try {
+      await AsnyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      alert("fail to save todos...");
+    }
+  };
+  const loadToDos = async () => {
+    try {
+      const loadString = await AsnyncStorage.getItem(STORAGE_KEY);
+      loadString !== null && setToDos(JSON.parse(loadString));
+    } catch (e) {
+      alert("can't load todos...");
+    }
+  };
+
+  const travel = () => setMode(modes.travel);
+  const work = () => setMode(modes.work);
 
   const onChangeInputText = (payload) => {
     setUserText(payload);
   };
 
-  const addToDo = () => {
+  const addToDo = async () => {
     if (userText === "") return;
 
     const newToDos = Object.assign({}, toDos, {
-      [Date.now()]: { userText, work: working },
+      [Date.now()]: { text: userText, mode },
     });
+    // or
+    // const newToDos = {...toDos, [Date.now()]: { userText, mode },}
+
     setToDos(newToDos);
+    await saveToDos(newToDos);
     setUserText("");
   };
 
-  useEffect(() => {}, [working]);
+  useEffect(() => {
+    loadToDos();
+  }, []);
   return (
     <View style={styles.container}>
       <StatusBar style='light' />
       <View style={styles.header}>
         <TouchableOpacity activeOpacity={0.7} onPress={work}>
           <Text
-            style={{ ...styles.btnText, color: working ? "white" : theme.grey }}
+            style={{
+              ...styles.btnText,
+              color: mode === modes.work ? "white" : theme.grey,
+            }}
           >
             Work
           </Text>
@@ -47,7 +80,7 @@ export default function App() {
           <Text
             style={{
               ...styles.btnText,
-              color: !working ? "white" : theme.grey,
+              color: mode === modes.travel ? "white" : theme.grey,
             }}
           >
             Travel
@@ -60,9 +93,21 @@ export default function App() {
           onSubmitEditing={addToDo}
           value={userText}
           placeholderTextColor={theme.grey}
-          placeholder={working ? "add to do" : "where you want to go?"}
+          placeholder={
+            mode === modes.work ? "add to do" : "where you want to go?"
+          }
           style={styles.input}
         />
+        <ScrollView>
+          {Object.keys(toDos).map(
+            (key) =>
+              toDos[key].mode === mode && (
+                <View style={styles.toDo} key={key}>
+                  <Text style={styles.toDoText}>{toDos[key].text}</Text>
+                </View>
+              )
+          )}
+        </ScrollView>
       </View>
     </View>
   );
@@ -89,7 +134,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 30,
-    marginTop: 20,
+    marginVertical: 20,
     fontSize: 18,
   },
+
+  toDo: {
+    backgroundColor: theme.grey,
+    marginBottom: 10,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderRadius: 15,
+  },
+  toDoText: { color: "white", fontSize: 18, fontWeight: 500 },
 });
